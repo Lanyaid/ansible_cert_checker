@@ -1,0 +1,28 @@
+---
+- name: "Get a cert from port {{ check_port }}"
+  get_certificate:
+    host: "{{ inventory_hostname }}"
+    port: "{{ check_port }}"
+  delegate_to: localhost
+  run_once: true
+  register: cert
+#- name: "How many days until cert expires"
+#  debug:
+#    msg: "{{ cert }}"
+- name: "Set format to not_before date"
+  set_fact:
+    notbefore: "{{ (cert.not_before | to_datetime('%Y%m%d%H%M%SZ')).strftime('%d-%m-%Y') }}"
+- name: "Set format to not_after date"
+  set_fact:
+    notafter: "{{ (cert.not_after | to_datetime('%Y%m%d%H%M%SZ')).strftime('%d-%m-%Y') }}"
+- name: "Set expire day value"
+  set_fact:
+    expire_days: "{{ (( cert.not_after | to_datetime('%Y%m%d%H%M%SZ')) - (ansible_date_time.iso8601 | to_datetime('%Y-%m-%dT%H:%M:%SZ')) ).days }}"
+#- name: "Show info"
+#  debug:
+#    msg: "Name: {{ inventory_hostname }} Port: {{ check_port }} Expire: {{ expire_days }} days Serial: {{ cert.serial_number }}"
+- name: "Write result into a file"
+  delegate_to: localhost
+  lineinfile: 
+    line: "{{ inventory_hostname }};{{ check_port }};{{ notbefore }};{{ notafter }};{{ expire_days }};{{ cert.subject.CN }};{{ cert.serial_number }}" 
+    path: "/tmp/result_cert.csv"

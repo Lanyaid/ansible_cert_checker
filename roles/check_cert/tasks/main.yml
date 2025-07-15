@@ -1,0 +1,118 @@
+---
+# Certificate retrieval and processing
+
+############## Retrieve the certificate ##############
+- name: "Retrieve the certificate from port {{ check_port }}"
+  shell: >-
+    timeout 5s openssl s_client -connect $(hostname):{{ check_port }} </dev/null 2>/dev/null | openssl x509 -noout -text 2>&1
+  register: cert
+############## End of certificate retrieval ##############
+
+############## Save the certificate content ##############
+- name: "Save certificate content into a fact"
+  set_fact:
+    cert_content: "{{ cert.stdout }}"
+############## End of saving the certificate content ##############
+
+############## Processing the 'Not Before' date ##############
+- name: "Extract the 'Not Before' date"
+  set_fact:
+    notbefore_raw: "{{ (cert_content | regex_search('Not Before: (.*) GMT', '\\1'))[0] | default('') | string | trim }}"
+
+- name: "Format the 'Not Before' date"
+  shell: |
+    if [ -n "{{ notbefore_raw }}" ]; then
+      date -d "{{ notbefore_raw }}" +"%d/%m/%Y"
+    else
+      echo "Not defined"
+    fi
+  register: notbefore
+  failed_when: notbefore.rc != 0
+
+- name: "Set a default value if 'Not Before' is empty"
+  set_fact:
+    notbefore: "Not defined"
+  when: notbefore.stdout is not defined or notbefore.stdout | length == 0
+
+- name: "Check the extracted 'Not Before' date"
+  debug:
+    msg: "The 'Not Before' date is: {{ notbefore.stdout }}"
+############## End of processing the 'Not Before' date ##############
+
+############## Processing the 'Not After' date ##############
+- name: "Extract the 'Not After' date"
+  set_fact:
+    notafter_raw: "{{ (cert_content | regex_search('Not After : (.*) GMT', '\\1'))[0] | default('') | string | trim }}"
+
+- name: "Format the 'Not After' date"
+  shell: |
+    if [ -n "{{ notafter_raw }}" ]; then
+      date -d "{{ notafter_raw }}" +"%d/%m/%Y"
+    else
+      echo "Not defined"
+    fi
+  register: notafter
+  failed_when: notafter.rc != 0
+
+- name: "Set a default value if 'Not After' is empty"
+  set_fact:
+    notafter: "Not defined"
+  when: notafter.stdout is not defined or notafter.stdout | length == 0
+
+- name: "Check the extracted 'Not After' date"
+  debug:
+    msg: "The 'Not After' date is: {{ notafter.stdout }}"
+############## End of processing the 'Not After' date ##############
+
+############## Processing the 'Subject CN' ##############
+- name: "Extract the 'Subject CN' value"
+  set_fact:
+    subject_CN_raw: "{{ (cert_content | regex_search('Subject: .*, CN=([^\\n]+)', '\\1'))[0] | default('') | string | trim }}"
+
+- name: "Set a default value if 'Subject CN' is empty"
+  set_fact:
+    subject_CN: "{{ subject_CN_raw | default('Not defined') }}"
+
+- name: "Check the extracted 'Subject CN' value"
+  debug:
+    msg: "The 'Subject CN' value is: {{ subject_CN }}"
+############## End of processing the 'Subject CN' ##############
+
+############## Processing the serial number ##############
+- name: "Extract the certificate's serial number"
+  set_fact:
+    serial_number_raw: "{{ (cert_content | regex_search('Serial Number:\\s*([A-Fa-f0-9:]+)', '\\1'))[0] | default('') | string | trim }}"
+
+- name: "Set a default value if the serial number is empty"
+  set_fact:
+    serial_number: "{{ serial_number_raw | default('Not defined') }}"
+
+- name: "Check the extracted serial number"
+  debug:
+    msg: "The serial number is: {{ serial_number }}"
+############## End of processing the serial number ##############
+
+############## Calculating days until expiration ##############
+- name: "Check the current date (today_date)"
+  debug:
+    msg: "The current date is: {{ today_date }}"
+
+- name: "Calculate the remaining days until expiration"
+  set_fact:
+    expire_days: "{{ (( notafter.stdout | to_datetime('%d/%m/%Y')) - (today_date | to_datetime('%Y-%m-%dT%H:%M:%SZ')) ).days }}"
+  when: 
+    - notafter.stdout is defined and notafter.stdout | length > 0
+    - today_date is defined and today_date | length > 0
+
+- name: "Check the calculated days before expiration."
+  debug:
+    msg: "The current value for days expiration is: {{ expire_days }}"
+############## End of calculating days until expiration ##############
+
+############## Writing results to a CSV file ##############
+- name: "Write the results to a CSV file on localhost"
+  delegate_to: localhost
+  lineinfile: 
+    line: "{{ inventory_hostname }};{{ check_port }};{{ notbefore.stdout }};{{ notafter.stdout }};{{ expire_days }};{{ subject_CN }};{{ serial_number }}" 
+    path: "/tmp/result_cert.csv"
+############## End of writing results to a CSV file ##############

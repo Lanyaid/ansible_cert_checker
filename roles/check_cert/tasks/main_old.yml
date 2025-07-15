@@ -1,0 +1,73 @@
+---
+- name: "Get a cert from port {{ check_port }}"
+  #run_once: true
+  shell: >-
+    timeout 5s openssl s_client -connect $(hostname):{{ check_port }} </dev/null 2>/dev/null | openssl x509 -noout -text 2>&1
+  register: cert
+
+- name: Dump cert value
+  debug:
+    var: cert.stdout
+
+# - name: Dump cert value
+#   debug:
+#     var: cert.stdout_lines
+
+- name: "Set not_before date and format it"
+  shell: |
+    beforetext=$(echo "{{ cert.stdout }}" | grep -e 'Before:' | awk -F': ' '{print $2}';)
+    [[ x"$beforetext" != x ]] &&  before=$(date -d "$beforetext" +"%d/%m/%Y") || before=''
+    echo "${before}"
+  register: notbefore
+- name: "Set not_after date and format it"
+  shell: |
+    aftertext=$(echo "{{ cert.stdout }}" | grep -e "After :" | awk -F": " '{print $2}';)
+    [[ x"$aftertext" != x ]] &&  after=$(date -d "$aftertext" +"%d/%m/%Y") || after=""
+    echo "${after}"
+  register: notafter
+
+- name: "Set subject_CN value"
+  shell: |
+    subjectcn=$(echo "{{ cert.stdout }}" | awk '/Subject Alternative Name:/ {getline; print}' | sed 's/^[ \t]*//')
+    [[ x"$subjectcn" != x ]] &&  subject="$subjectcn" || subject="Not detected"
+    echo "${subject}"
+  register: subject_CN
+- name: "Set serial_number value"
+  shell: |
+    serial_number=$(echo "{{ cert.stdout }}" | awk '/Serial Number:/ {getline; print}' | sed 's/^[ \t]*//')
+    [[ x"$serial_number" != x ]] &&  serial="$serial_number" || serial="Not detected"
+    echo "${serial}"
+  register: serial_number
+
+#- name: Dump notbefore value
+#  debug:
+#    var: notbefore.stdout
+#
+#- name: Dump notafter value
+#  debug:
+#    var: notafter.stdout
+#
+- name: Dump serial value
+  debug:
+    var: serial_number.stdout
+
+
+#  set_fact:
+#    notbefore: "{{ (cert.not_before | to_datetime('%Y%m%d%H%M%SZ')).strftime('%d-%m-%Y') }}"
+#- name: "Set format to not_after date"
+#  set_fact:
+#    notafter: "{{ (cert.not_after | to_datetime('%Y%m%d%H%M%SZ')).strftime('%d-%m-%Y') }}"
+- name: "Set expire day value"
+  set_fact:
+    expire_days: "{{ (( notafter.stdout | to_datetime('%d/%m/%Y')) - (ansible_date_time.iso8601 | to_datetime('%Y-%m-%dT%H:%M:%SZ')) ).days }}"
+#- name: Dump expire_days value
+#  debug:
+#    var: expire_days
+#- name: "Show info"
+#  debug:
+#    msg: "Name: {{ inventory_hostname }} Port: {{ check_port }} Expire: {{ expire_days }} days Serial: {{ cert.serial_number }}"
+- name: "Write result into a file"
+  delegate_to: localhost
+  lineinfile: 
+    line: "{{ inventory_hostname }};{{ check_port }};{{ notbefore.stdout }};{{ notafter.stdout }};{{ expire_days }};{{ subject_CN.stdout }};{{ serial_number.stdout }}" 
+    path: "/tmp/result_cert.csv"

@@ -1,0 +1,19 @@
+---
+- name: "Variables AM"
+  hosts: am
+  become: true
+  become_user: root
+  any_errors_fatal: false
+  gather_facts: false
+  tasks:
+    - debug:
+        var: hostvars[inventory_hostname]
+- name: "Variables DS"
+  hosts: ds
+  become: true
+  become_user: root
+  any_errors_fatal: false
+  gather_facts: false
+  tasks:
+    - debug:
+        var: hostvars[inventory_hostname]

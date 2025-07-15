@@ -1,0 +1,112 @@
+---
+# Manage and process certificate results
+
+############## Setup on localhost: Prepare result file ##############
+- name: "Administer local result file"
+  hosts: localhost
+  gather_facts: true  # Only gather facts on localhost
+  tasks:
+    - name: "Set today's date on localhost"
+      set_fact:
+        local_today_date: "{{ ansible_date_time.iso8601 }}"
+
+    - name: "Remove old result file"
+      file:
+        path: "/tmp/result_cert.csv"
+        state: absent
+
+    - name: "Create new result file"
+      file:
+        path: "/tmp/result_cert.csv"
+        state: touch
+
+    - name: "Add headers to the result file"
+      delegate_to: localhost
+      lineinfile:
+        line: "Hostname;Port;Not Before;Not After;Expire Days;Subject;Serial Number" 
+        path: "/tmp/result_cert.csv"
+############## End of localhost setup ##############
+
+############## Check certificates on Forgerock OpenAM hosts ##############
+- name: "Forgerock OpenAM - Check installed certificates"
+  hosts: "am"
+  become: no
+  gather_facts: false
+  any_errors_fatal: false
+  ignore_errors: true
+  ignore_unreachable: true
+  max_fail_percentage: 50
+  serial: 1
+  vars:
+    check_port: "{{ check_port1 }}"
+  tasks:
+    - name: "Import check_cert role for OpenAM hosts"
+      import_role:
+        name: check_cert
+        tasks_from: main
+      vars:
+        today_date: "{{ hostvars['localhost'].local_today_date }}"
+############## End of OpenAM certificate check ##############
+
+############## Check certificates on Forgerock OpenDS (replication) ##############
+- name: "Forgerock OpenDS - Check installed certificates (replication)"
+  hosts: ds,!exclude_rep
+  become: no
+  gather_facts: false
+  any_errors_fatal: false
+  ignore_errors: true
+  ignore_unreachable: true
+  max_fail_percentage: 50
+  throttle: 1
+  serial: 1
+  vars:
+    check_port: "{{ check_port1 }}"
+  tasks:
+    - name: "Import check_cert role for OpenDS replication"
+      import_role:
+        name: check_cert
+        tasks_from: main
+      vars:
+        today_date: "{{ hostvars['localhost'].local_today_date }}"
+############## End of OpenDS (replication) certificate check ##############
+
+############## Check certificates on Forgerock OpenDS (LDAPS) ##############
+- name: "Forgerock OpenDS - Check installed certificates (LDAPS)"
+  hosts: ds,!exclude_ldaps
+  become: no
+  gather_facts: false
+  any_errors_fatal: false
+  ignore_errors: true
+  ignore_unreachable: true
+  max_fail_percentage: 50
+  throttle: 1
+  serial: 1
+  vars:
+    check_port: "{{ check_port2 }}"
+  tasks:
+    - name: "Import check_cert role for OpenDS LDAPS"
+      import_role:
+        name: check_cert
+        tasks_from: main
+      vars:
+        today_date: "{{ hostvars['localhost'].local_today_date }}"
+############## End of OpenDS (LDAPS) certificate check ##############
+
+############## Check certificates on Forgerock OpenDS (admin interface) ##############
+- name: "Forgerock OpenDS - Check installed certificates (admin interface)"
+  hosts: ds
+  become: no
+  gather_facts: no
+  any_errors_fatal: false
+  throttle: 1
+  serial: 1
+  vars:
+    check_port: "{{ check_port3 }}"
+  tasks:
+    - name: "Import check_cert role for OpenDS admin interface"
+      import_role:
+        name: check_cert
+        tasks_from: main
+      vars:
+        today_date: "{{ hostvars['localhost'].local_today_date }}"
+############## End of OpenDS (admin interface) certificate check ##############
