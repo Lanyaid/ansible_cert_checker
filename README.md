@@ -1,4 +1,4 @@
-Este playbook sirve para checkear, analizar y sacar un reporte de todos los certificados usados en todas las plataformas de openAM (menos lo certificado de firma).
+Este playbook sirve para checkear, analizar y sacar un reporte de todos los certificados usados en todas las plataformas de openAM (menos los certificados de firma).
   * certificados SSL para https de los tomcat
   * certificados de encryptacion de la communicacions (LDAPS 1636 o admin 4444)
   * certificados de encryptacion de la communicacions (Puerto de replicacion cuando la hay: 8989)
