@@ -1,121 +1,42 @@
-All repositories must include a good README with valuable information and written in English so anybody in the organization can understand it.
+Este playbook sirve para checkear, analizar y sacar un reporte de todos los certificados usados en todas las plataformas de openAM (menos lo certificado de firma).
+  * certificados SSL para https de los tomcat
+  * certificados de encryptacion de la communicacions (LDAPS 1636 o admin 4444)
+  * certificados de encryptacion de la communicacions (Puerto de replicacion cuando la hay: 8989)
 
-Before the Summary section, add a header with [status badges](https://docs.github.com/en/actions/managing-workflow-runs/adding-a-workflow-status-badge), your product's or artifact's logo, and a horizontal, centered index like the following:
+El playbook:
+- lee un certificado en uso en la maquina de destino (openAM o openDS) segun que puerto configurado en el inventario
+- saca la fecha de inicio del certificado, la fecha de caducidad, calcula la differencia de dias que quedaria valido entre la fecha de caducidad y la fecha de hoy(al momento de ejecutar).
+- saca el subject del certificado (a controlar, hay un bug creo)
+- saca el numero de serie, permitiendo comparar en pycportal y asegurar que es el mismo certificado instalado en la maquina que el observado en la vigilancia de pycportal.
 
-<p align="center">
-  <a href="#-summary">Summary</a> ·
-  <a href="#-getting-started">Getting started</a> ·
-  <a href="#-usage">Usage</a> ·
-  <a href="#-technical-design">Technical design</a> ·
-  <a href="#-contributing">Contributing</a> ·
-  <a href="#-support">Support</a>
-</p>
+Ejemplo de analisis que hace el playbook:
 
-Follow this template for your README. You can add other sections that you may find relevant for your repo but remember to never duplicate the content and to link to the documentation whenever possible.
+Hostname;Port;Not Before;Not After;Expire Days;Subject;Serial Number
+axdesopenam3.central.inditex.grp;8443;25/06/2025;25/06/2027;713;;46:00:13:62:5f:c1:22:d0:7c:19:b5:be:f1:00:01:00:13:62:5f
+axdesopenam4.central.inditex.grp;8443;25/06/2025;25/06/2027;713;;46:00:13:62:5f:c1:22:d0:7c:19:b5:be:f1:00:01:00:13:62:5f
+axdesecgfam0201.central.inditex.grp;8443;24/01/2025;24/01/2027;561;;46:00:0d:57:ee:65:d3:61:bd:63:ea:66:f6:00:01:00:0d:57:ee
+axdesgfam0101.central.inditex.grp;8443;25/06/2025;25/06/2027;713;;46:00:13:62:a2:f3:ce:8a:9f:14:47:36:3d:00:01:00:13:62:a2
+...
+axpregfdscf01.central.inditex.grp;8989;10/07/2019;05/07/2039;5106;;165300160
+axpregfdscf02.central.inditex.grp;8989;10/07/2019;05/07/2039;5106;;626547341
+axpregfdstk01.central.inditex.grp;8989;10/07/2019;05/07/2039;5106;;720721386
+axpregfdstk02.central.inditex.grp;8989;10/07/2019;05/07/2039;5106;;1219937472
+axpreectfdsc101.central.inditex.grp;8989;28/10/2021;23/10/2041;5947;;2137871746
+...
+axdesopends1.central.inditex.grp;1636;10/09/2024;10/09/2026;425;;46:00:07:38:9f:e4:b0:3f:e1:ff:d4:14:07:00:01:00:07:38:9f
+axdesopends2.central.inditex.grp;1636;10/09/2024;10/09/2026;425;;46:00:07:38:a0:9b:3a:cb:75:50:8b:20:b9:00:01:00:07:38:a0
+axdesecgfds0201.central.inditex.grp;1636;24/01/2025;24/01/2027;561;;46:00:0d:58:e9:35:f9:9b:af:f9:25:ad:46:00:01:00:0d:58:e9
+axdesgfds0101.central.inditex.grp;1636;29/02/2024;28/02/2026;231;;46:00:02:1a:ca:c8:be:9d:ee:98:af:ca:18:00:00:00:02:1a:ca
+...
+axdesopends1.central.inditex.grp;4444;10/09/2024;10/09/2026;425;;46:00:07:38:9f:e4:b0:3f:e1:ff:d4:14:07:00:01:00:07:38:9f
+axdesopends2.central.inditex.grp;4444;10/09/2024;10/09/2026;425;;46:00:07:38:a0:9b:3a:cb:75:50:8b:20:b9:00:01:00:07:38:a0
+axdesecgfds0201.central.inditex.grp;4444;24/01/2025;24/01/2027;561;;46:00:0d:58:e9:35:f9:9b:af:f9:25:ad:46:00:01:00:0d:58:e9
+axdesgfds0101.central.inditex.grp;4444;29/02/2024;28/02/2026;231;;46:00:02:1a:ca:c8:be:9d:ee:98:af:ca:18:00:00:00:02:1a:ca
+axpreecgfdscf01.central.inditex.grp;4444;29/01/2025;29/01/2027;566;;46:00:0d:8b:8a:d8:69:89:dd:7c:dc:2f:5d:00:01:00:0d:8b:8a
+axpreecgfdstk01.central.inditex.grp;4444;24/01/2025;24/01/2027;561;;46:00:0d:58:da:52:64:52:10:2f:9f:9f:0c:00:01:00:0d:58:da
 
-Aside from the titles, this content is intended to serve as indications and guidelines which you must delete from the final version of your README. However, we advise you not to delete the indications until you have finished with the sections.
+SOLO LOCAL!!! 
 
-The admonitions below the titles indicate the importance of the section. Remember to delete them too from the final version of the README.md.
+se sincroniza desde github en local unicamente, ya que escribe un fichero en el /tmp de la maquina ejecutador
 
-## 📜 Summary
->  🔴 Mandatory
-
-In this first summary section, include a brief, functional description of the product or artifact. **Make sure you describe its goal and/or the purpose of this specific repository** (artifact) within a bigger project, product, or service.
-
-In this summary, you should answer audience questions such as:
-
-- Is this the repo I am looking for?
-- Can I solve my problem with this product/artifact?
-
-Besides explaining what this repo is and what it is used for, a good approach is indicating what this repo is not and what it shouldn't be used for. This way, you'll narrow down its purpose and will reduce misunderstandings.
-
-### Documentation
->  🟡 If applies
-
-If this is a product repo, make sure you link to the product documentation.
-
-If this is an artifact repo, you should specify the product it belongs to, its role within the product, and provide a link to the product documentation when appropriate, so the audience knows where to find it.
-
-### Related products
->  🟡 If applies
-
-List and provide links to the different repositories that make up the product to which this repo belongs. In the case of artifact repos, provide the link to the product's main repository.
-
-### Technology
->  🟠 Advised
-
-In this section, make sure you specify:
-
-- Platform/language.
-- Type of artifact (web application, web service, desktop application, mobile app, batch process...).
-- Deployment platform.
-- Others that may apply for your product/artifact.
-
-## 🚀 Getting started
->  🔴 Mandatory
-
-If explained in the product/artifact documentation, provide a link to the "Getting started" module of the product documentation.
-
-If no explanation is available anywhere else, explain in this README which processes are needed to get started with this product/artifact (installation, run/build?), following the outline:
-
-### Dependencies
-
-Explain the dependencies used to run the product/artifact.
-
-### Installation
-
-Explain the process that the users must follow to install the product/artifact.
-
-### Execution
-
-Explain the process that the users must follow to run or build the product/artifact.
-
-## 🧑🏻‍💻 Usage
->  🟠 Advised
-
-Once installed, built/run, or both, explain the different steps needed to get to using the product/artifact; in this case, configurations or deployments required:
-
-If explained in the product documentation, provide a link to the "Configuration" and/or "Deployment" modules of the product documentation.
-
-If no explanation is available anywhere else, explain in this README the process of configuration and/or deployment following the outline:
-
-### Configuration
-
-Explain the process that the users must follow to configure the product/artifact.
-
-### Deployment
-
-Explain the process that the users must follow to deploy the product/artifact.
-
-## 📊 Technical design
->  🟠 Advised
-
-### Architecture diagram
-
-Add a link to the "<product> architecture" page on the product's documentation.
-
-  If you need more detail to describe the artifact's architecture, and it doesn't make sense to include it on the product's documentation, you can create a specific page on the repo's wiki and provide a link to it on the README.
-
-  ### Project structure
-
-  Include this information here only if it is not already on the CONTRIBUTING.md, the "<product> architecture" page, or any other documentation page.
-
-    Add a link to the artifact structure page on the product's documentation.
-
-    If you need more detail to describe the artifact's structure, and it doesn't make sense to include it on the product's documentation, you can create a specific page on the repo's wiki and provide a link to it on the README.
-
-    ### System integration
-
-    Add a link to the page on the product's documentation that explains how this product accesses other systems.
-
-    If you need more detail to describe the artifact's integration, and it doesn't make sense to include it on the product's documentation, you can create a specific page on the repo's wiki and provide a link to it on the README.
-
-    ## 🤝 Contributing
-    >  🟠 Advised
-
-    Link to the CONTRIBUTING.md (or respective documentation page) to check the details about the product/artifact structure, code formatting, name conventions, and the process for submitting pull requests with contributions.
-
-    ## 🧰 Support
-    >  🔴 Mandatory
-
-    Add a link to the support section in the product's documentation. If no documentation exists yet, make sure you specify how users can contact you/the team.
+ansible-playbook -i inventories/forgerock_inventory.yml ./check_cert.yml
