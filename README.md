@@ -37,6 +37,6 @@ axpreecgfdstk01.central.inditex.grp;4444;24/01/2025;24/01/2027;561;;46:00:0d:58:
 
 SOLO LOCAL!!! 
 
-se sincroniza desde github en local unicamente, ya que escribe un fichero en el /tmp de la maquina ejecutador
+se sincroniza desde github en local unicamente, ya que escribe un fichero en el /tmp de la maquina ejecutadora
 
 ansible-playbook -i inventories/forgerock_inventory.yml ./check_cert.yml
