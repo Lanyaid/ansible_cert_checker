@@ -1,24 +1,17 @@
-am:
+<groupname1>:
   vars: 
     check_port1: 8443
   hosts:
-    #axdeslabfam1.central.inditex.grp:
-    #axdeslabfam2.central.inditex.grp:
-    axdeslabfam3.central.inditex.grp:
-    axdeslabfam4.central.inditex.grp:
-ds:
+    #hostname:
+<groupname2>:
   vars:
     check_port1: 8989
     check_port2: 1636
     check_port3: 4444
   hosts:
-    axdeslabfdscf1.central.inditex.grp:
-    axdeslabfdscf2.central.inditex.grp:
-    axdeslabfdstk1.central.inditex.grp:
-    #axdeslabfdstk2.central.inditex.grp:
-    axdeslabfdstk3.central.inditex.grp:
-    #axdeslabfdstk4.central.inditex.grp:
+    #hostname2:
 exclude_rep:
   hosts:
-exclude_ldaps:
+    #hostname3:
+exclude_<groupname3>:
   hosts:
